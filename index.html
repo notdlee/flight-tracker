@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DFW → DC · Flight Tracker</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f9f9f8;
+  --surface: #ffffff;
+  --border: rgba(0,0,0,0.09);
+  --text: #111;
+  --muted: #888;
+  --secondary: #555;
+  --accent: #2a78d6;
+  --accent-light: #e8f1fc;
+  --green: #1a7f37;
+  --green-light: #eaf4ec;
+  --radius: 10px;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 32px 20px 60px;
+}
+.container { max-width: 780px; margin: 0 auto; }
+
+.header { margin-bottom: 24px; }
+.header h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.header .meta { font-size: 13px; color: var(--secondary); display: flex; gap: 16px; flex-wrap: wrap; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 4px; }
+
+.updated-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px; background: var(--surface);
+  border: 0.5px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 20px; font-size: 12px; color: var(--muted);
+}
+.updated-bar strong { color: var(--text); }
+
+.best-callout {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--green-light); border: 0.5px solid rgba(26,127,55,0.2);
+  border-radius: var(--radius); padding: 10px 14px;
+  font-size: 13px; color: var(--green); margin-bottom: 24px;
+}
+
+.combo { margin-bottom: 28px; }
+.combo-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px; flex-wrap: wrap; gap: 8px;
+}
+.combo-title { font-size: 15px; font-weight: 600; }
+.combo-sub { font-size: 12px; color: var(--muted); margin-left: 8px; font-weight: 400; }
+.gf-link {
+  font-size: 12px; color: var(--accent); text-decoration: none;
+  border: 0.5px solid rgba(42,120,214,0.3); border-radius: 6px;
+  padding: 3px 10px; white-space: nowrap;
+}
+.gf-link:hover { background: var(--accent-light); }
+
+.flight-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  font-size: 13px;
+}
+.flight-table th {
+  background: var(--bg); font-weight: 500; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--muted); padding: 9px 14px; text-align: left;
+  border-bottom: 0.5px solid var(--border);
+}
+.flight-table td {
+  padding: 11px 14px; border-bottom: 0.5px solid var(--border);
+  vertical-align: middle;
+}
+.flight-table tr:last-child td { border-bottom: none; }
+.flight-table tr:hover td { background: #fafaf9; }
+
+.airline-name { font-weight: 500; }
+.route-tag { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.time-main { font-weight: 500; }
+.time-arr { color: var(--secondary); }
+.arrow { color: var(--muted); margin: 0 3px; }
+.duration { font-size: 12px; color: var(--muted); }
+.nonstop-badge {
+  font-size: 10px; font-weight: 500; padding: 2px 7px;
+  border-radius: 20px; background: var(--green-light); color: var(--green);
+  white-space: nowrap;
+}
+.price-cell { font-size: 15px; font-weight: 600; }
+.best-price { color: var(--green); }
+.book-btn {
+  display: inline-block; font-size: 12px; font-weight: 500;
+  color: var(--accent); text-decoration: none;
+  border: 0.5px solid rgba(42,120,214,0.35); border-radius: 6px;
+  padding: 4px 10px; white-space: nowrap;
+}
+.book-btn:hover { background: var(--accent-light); }
+
+.sw-section {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 28px;
+}
+.sw-header { font-size: 13px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.airport-warn { font-size: 11px; color: #c0392b; background: #fdf0ef; padding: 1px 7px; border-radius: 4px; font-weight: 400; }
+.sw-note { font-size: 12px; color: var(--secondary); margin-bottom: 10px; }
+.sw-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-top: 0.5px solid var(--border); font-size: 13px;
+}
+.sw-dates { font-weight: 500; }
+.sw-flight { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.sw-price { font-weight: 600; font-size: 15px; }
+
+.footer {
+  margin-top: 32px; padding-top: 16px;
+  border-top: 0.5px solid var(--border);
+  font-size: 12px; color: var(--muted);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>DFW ✈ Washington DC &nbsp;·&nbsp; Flight Tracker</h1>
+    <div class="meta">
+      <span><span class="dot"></span>Festival dates: Aug 7–10, 2026</span>
+      <span>No Frontier &nbsp;·&nbsp; Nonstop only &nbsp;·&nbsp; Round-trip, 1 adult</span>
+    </div>
+  </div>
+
+  <div class="updated-bar">
+    <span>Prices from <strong>Google Flights</strong> as of <strong>June 29, 2026</strong></span>
+    <span>Click "Check live" on any section to see today's prices</span>
+  </div>
+
+  <div class="best-callout">
+    ✦ <span><strong>Best deal: Aug 7–11</strong> — United or American nonstop DFW → IAD from <strong>$193 RT</strong>. Arrive by noon, home the day after the festival.</span>
+  </div>
+
+  <!-- Aug 7–11 -->
+  <div class="combo">
+    <div class="combo-header">
+      <div>
+        <span class="combo-title">Aug 7 → 11</span>
+        <span class="combo-sub">4 nights · depart day of festival</span>
+      </div>
+      <a class="gf-link" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Check live on Google Flights →</a>
+    </div>
+    <table class="flight-table">
+      <thead>
+        <tr>
+          <th>Airline</th>
+          <th>Outbound · Aug 7</th>
+          <th>Duration</th>
+          <th>Stops</th>
+          <th>Price RT</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="airline-name">United</div><div class="route-tag">DFW → IAD (Dulles)</div></td>
+          <td><span class="time-main">7:20 AM</span><span class="arrow">→</span><span class="time-arr">11:26 AM</span></td>
+          <td class="duration">3h 6m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell best-price">$193</td>
+          <td><a class="book-btn" href="https://www.united.com/en/us/fsr/choose-flights?f=DFW&t=IAD&d=2026-08-07&r=2026-08-11&tt=2&sc=7&px=1&taxng=1&idx=1" target="_blank">Book →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → IAD (Dulles)</div></td>
+          <td><span class="time-main">10:00 AM</span><span class="arrow">→</span><span class="time-arr">2:02 PM</span></td>
+          <td class="duration">3h 2m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell best-price">$193</td>
+          <td><a class="book-btn" href="https://www.aa.com/booking/search?locale=en_US&pax=1&adult=1&type=OneWay&searchType=matrix&cabin=&carriers=AA&outbFlt=&inbFlt=&ori0=DFW&dst0=IAD&dat0=2026-08-07&ori1=IAD&dst1=DFW&dat1=2026-08-11" target="_blank">Book →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">United</div><div class="route-tag">DFW → IAD (Dulles)</div></td>
+          <td><span class="time-main">12:25 PM</span><span class="arrow">→</span><span class="time-arr">4:31 PM</span></td>
+          <td class="duration">3h 6m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell best-price">$193</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → IAD (Dulles)</div></td>
+          <td><span class="time-main">2:25 PM</span><span class="arrow">→</span><span class="time-arr">6:27 PM</span></td>
+          <td class="duration">3h 2m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell best-price">$193</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → DCA (Reagan)</div></td>
+          <td><span class="time-main">5:00 AM</span><span class="arrow">→</span><span class="time-arr">8:59 AM</span></td>
+          <td class="duration">2h 59m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$234</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → DCA (Reagan)</div></td>
+          <td><span class="time-main">7:00 AM</span><span class="arrow">→</span><span class="time-arr">10:59 AM</span></td>
+          <td class="duration">2h 59m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$234</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → DCA (Reagan)</div></td>
+          <td><span class="time-main">7:55 PM</span><span class="arrow">→</span><span class="time-arr">11:58 PM</span></td>
+          <td class="duration">3h 3m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$234</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Aug 6–11 -->
+  <div class="combo">
+    <div class="combo-header">
+      <div>
+        <span class="combo-title">Aug 6 → 11</span>
+        <span class="combo-sub">5 nights · arrive a day early</span>
+      </div>
+      <a class="gf-link" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA2agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Check live on Google Flights →</a>
+    </div>
+    <table class="flight-table">
+      <thead>
+        <tr>
+          <th>Airline</th>
+          <th>Outbound · Aug 6</th>
+          <th>Duration</th>
+          <th>Stops</th>
+          <th>Price RT</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → DCA (Reagan)</div></td>
+          <td><span class="time-main">5:00 AM</span><span class="arrow">→</span><span class="time-arr">8:59 AM</span></td>
+          <td class="duration">2h 59m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell best-price">$242</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA2agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → DCA (Reagan)</div></td>
+          <td><span class="time-main">7:00 AM</span><span class="arrow">→</span><span class="time-arr">10:59 AM</span></td>
+          <td class="duration">2h 59m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$242</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA2agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">United</div><div class="route-tag">DFW → IAD (Dulles)</div></td>
+          <td><span class="time-main">7:20 AM</span><span class="arrow">→</span><span class="time-arr">11:26 AM</span></td>
+          <td class="duration">3h 6m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$242</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA2agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">United</div><div class="route-tag">DFW → IAD (Dulles)</div></td>
+          <td><span class="time-main">12:25 PM</span><span class="arrow">→</span><span class="time-arr">4:31 PM</span></td>
+          <td class="duration">3h 6m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$242</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA2agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → DCA (Reagan)</div></td>
+          <td><span class="time-main">7:55 PM</span><span class="arrow">→</span><span class="time-arr">11:58 PM</span></td>
+          <td class="duration">3h 3m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$242</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA2agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTFqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Aug 7–12 -->
+  <div class="combo">
+    <div class="combo-header">
+      <div>
+        <span class="combo-title">Aug 7 → 12</span>
+        <span class="combo-sub">5 nights · stay an extra day after the festival</span>
+      </div>
+      <a class="gf-link" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTJqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Check live on Google Flights →</a>
+    </div>
+    <table class="flight-table">
+      <thead>
+        <tr>
+          <th>Airline</th>
+          <th>Outbound · Aug 7</th>
+          <th>Duration</th>
+          <th>Stops</th>
+          <th>Price RT</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="airline-name">United</div><div class="route-tag">DFW → IAD (Dulles)</div></td>
+          <td><span class="time-main">7:20 AM</span><span class="arrow">→</span><span class="time-arr">11:26 AM</span></td>
+          <td class="duration">3h 6m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell best-price">$234</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTJqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → IAD (Dulles)</div></td>
+          <td><span class="time-main">10:00 AM</span><span class="arrow">→</span><span class="time-arr">2:02 PM</span></td>
+          <td class="duration">3h 2m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$234</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTJqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → DCA (Reagan)</div></td>
+          <td><span class="time-main">5:00 AM</span><span class="arrow">→</span><span class="time-arr">8:59 AM</span></td>
+          <td class="duration">2h 59m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$234</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTJqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → DCA (Reagan)</div></td>
+          <td><span class="time-main">7:00 AM</span><span class="arrow">→</span><span class="time-arr">10:59 AM</span></td>
+          <td class="duration">2h 59m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$234</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTJqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+        <tr>
+          <td><div class="airline-name">American</div><div class="route-tag">DFW → DCA (Reagan)</div></td>
+          <td><span class="time-main">7:55 PM</span><span class="arrow">→</span><span class="time-arr">11:58 PM</span></td>
+          <td class="duration">3h 3m</td>
+          <td><span class="nonstop-badge">Nonstop</span></td>
+          <td class="price-cell">$234</td>
+          <td><a class="book-btn" href="https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI2LTA4LTA3agcIARIDREZXcgcIARIDV0FTGh4SCjIwMjYtMDgtMTJqBwgBEgNXQVNyBwgBEgNERlcwAUgBcAGCAQsI____________AZABAg&hl=en" target="_blank">Search →</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Southwest -->
+  <div class="sw-section">
+    <div class="sw-header">
+      Southwest Airlines
+      <span class="airport-warn">⚠ Departs DAL (Love Field), not DFW</span>
+    </div>
+    <div class="sw-note">Southwest doesn't appear on Google Flights. Includes 2 free checked bags. Book directly at southwest.com.</div>
+    <div class="sw-row">
+      <div>
+        <div class="sw-dates">Aug 7–11 &nbsp;·&nbsp; Aug 7–12</div>
+        <div class="sw-flight">DAL 5:00 PM → DCA 8:55 PM &nbsp;·&nbsp; Nonstop</div>
+      </div>
+      <div style="text-align:right">
+        <div class="sw-price">~$307</div>
+        <a class="book-btn" href="https://www.southwest.com/en/flights/flights-from-dallas-to-washington-dc-reagan-national" target="_blank" style="margin-top:5px;display:inline-block">Book →</a>
+      </div>
+    </div>
+    <div class="sw-row">
+      <div>
+        <div class="sw-dates">Aug 6–11</div>
+        <div class="sw-flight">DAL 7:30 PM → DCA 11:20 PM &nbsp;·&nbsp; Nonstop</div>
+      </div>
+      <div style="text-align:right">
+        <div class="sw-price">~$307</div>
+        <a class="book-btn" href="https://www.southwest.com/en/flights/flights-from-dallas-to-washington-dc-reagan-national" target="_blank" style="margin-top:5px;display:inline-block">Book →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Prices from Google Flights &amp; Lastminute.com · Last updated June 29, 2026</span>
+    <span>IAD = Dulles (Metro Silver Line) &nbsp;·&nbsp; DCA = Reagan National (Metro Blue/Yellow)</span>
+  </div>
+
+</div>
+</body>
+</html>
